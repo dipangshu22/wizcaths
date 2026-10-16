@@ -284,7 +284,14 @@ form button{margin-top:12px;width:100%;justify-content:center}
   .hero{grid-template-columns:1fr;text-align:center;margin-bottom:12vh}
   .hero .logo{margin:0 auto 10px;width:150px}
   .hero .ctas{justify-content:center}
-  .hero .model{display:none}
+  .hero{gap:6px}
+  .hero .model{display:block;order:-1;width:min(210px,52vw);margin:0 auto -6px}
+  .hero .model .badge{font-size:10.5px;padding:5px 8px;border-radius:10px}
+  .hero .model .badge:first-of-type{left:-34%!important;top:30%!important}
+  .hero .model .badge:last-of-type{right:-34%!important;bottom:14%!important}
+  .hero .logo{display:none}
+  .hero h1{font-size:clamp(26px,7.6vw,36px);margin:8px 0}
+  .hero .motto{letter-spacing:.24em;font-size:12px;margin:4px 0 14px}
   .split,.apply,.campus,.abroad,.leaders{grid-template-columns:1fr}
   .split{gap:14px}.values li{padding:10px 12px}.values span{font-size:13px}
   .apply{gap:14px}.apply .intro .contact-list,.apply .intro .foot{display:none}
@@ -309,6 +316,7 @@ form button{margin-top:12px;width:100%;justify-content:center}
   .hint{display:none}.zoom{bottom:8px;padding:4px}.zoom button{width:32px;height:32px}
   .brand img{height:34px}.top-cta .btn{padding:8px 14px}
   .hero .logo{display:none}.hero h1{font-size:26px}
+  .hero .model{display:none}
 }
 @media (max-height:720px) and (min-width:861px){
   .card .img{height:130px}.card p{display:none}
@@ -354,7 +362,7 @@ form button{margin-top:12px;width:100%;justify-content:center}
         <div class="halo"></div><div class="ring"></div>
         <img data-src="2025/10/Model-1024x1024.png" alt="WIZCATHS cabin crew trainee">
         <div class="badge" style="left:-6%;top:22%">🛫 Campus <b>inside LGBI Airport</b></div>
-        <div class="badge" style="right:-4%;bottom:20%">🇹🇭 <b>Thailand</b> exposure program</div>
+        <div class="badge" style="right:-4%;bottom:20%">🌏 <b>Thailand</b> exposure program</div>
       </div>
     </div>
   </section>
