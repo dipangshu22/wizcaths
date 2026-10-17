@@ -614,6 +614,8 @@ form button{margin-top:12px;width:100%;justify-content:center}
 <div class="modal" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer"><div class="frame"><button class="x" data-close aria-label="Close" style="right:0;top:-46px">✕</button><img id="lbimg" alt=""><button class="nav2 prev" id="lbprev" aria-label="Previous photo">←</button><button class="nav2 next" id="lbnext" aria-label="Next photo">→</button><div class="count" id="lbcount"></div></div></div>
 
 <script src="lib/three.min.js"></script>
+<script src="lib/GLTFLoader.js" defer></script>
+<script src="lib/meshopt_decoder.js" defer></script>
 <script>
 (() => {
 const IMG='images/';
@@ -1110,10 +1112,71 @@ function mixN(key,p){p=skp(p);const i=clamp(Math.floor(p),0,SK), j=clamp(i+1,0,S
 
 let px=0,py=-3.3,bank=0,last=performance.now(),time=0,lastSec=-1;
 // per-sector photo backgrounds (sector 2 onward)
-const SECBG={'Welcome':'2025-10-fd.webp','Leadership':'2025-11-WhatsApp-Image-2025-11-12-at-15.13.37-1.webp','Programs':'2025-10-37.webp','Go global':'2025-10-Fly-1024x1024.webp','Why us':'2025-11-ANI-20250329145154.webp','Trainers':'2025-09-Students-1.webp','Campus life':'2025-10-IMG_0373-scaled.webp','Stories':'2025-10-WhatsApp-Image-2025-10-06-at-13.22.17.webp','Partners':'2025-11-WhatsApp-Image-2024-11-26-at-1.32.54-PM-1-scaled.webp','Centres':'2025-11-WhatsApp-Image-2025-11-12-at-15.11.32-1.webp','Apply':'2025-10-WhatsApp-Image-2025-10-14-at-10.57.47.webp'};
+const SECBG={'Trainers':'2025-09-Students-1.webp','Campus life':'2025-10-IMG_0373-scaled.webp','Stories':'2025-10-WhatsApp-Image-2025-10-06-at-13.22.17.webp','Partners':'2025-11-WhatsApp-Image-2024-11-26-at-1.32.54-PM-1-scaled.webp','Centres':'2025-11-WhatsApp-Image-2025-11-12-at-15.11.32-1.webp','Apply':'2025-10-WhatsApp-Image-2025-10-14-at-10.57.47.webp'};
 const secbgEl=document.getElementById('secbg');
 const secLayers=[...document.querySelectorAll('.panel')].map((p,i)=>{const f=SECBG[p.dataset.title]; if(!f||i===0) return null; const d=document.createElement('div'); d.className='b'; d.dataset.src='images/'+f; secbgEl.appendChild(d); return {d,i,loaded:false};}).filter(Boolean);
 function updateSecBg(cur){for(const L of secLayers){const a=Math.abs(cur-L.i); const o=Math.max(0,1-a*1.25); if(a<1.6&&!L.loaded){L.d.style.backgroundImage=`url("${L.d.dataset.src}")`;L.loaded=true} L.d.style.display=o>0.002?'block':'none'; if(o>0.002){L.d.style.opacity=o; L.d.style.transform=`scale(${1.08+(L.i-cur)*-0.12})`}}}
+// ---------- 3D model backdrops (GLB) ----------
+// mountain skybox: Welcome→Programs · ship-in-clouds skybox: Go global→Why us · Eiffel Tower flown past at Go global
+const sIdx3=t=>[...document.querySelectorAll('.panel')].findIndex(p=>p.dataset.title===t);
+const BACKDROPS=[
+  {file:'models/mountain.glb',from:sIdx3('Welcome'),to:sIdx3('Programs'),yaw0:0.15,yawSpan:-1.7,pitch:-0.06,eye:[0.57,0.05,-0.04],dim:.42},
+  {file:'models/ship.glb',from:sIdx3('Go global'),to:sIdx3('Why us'),yaw0:3.5,yawSpan:-0.8,pitch:-0.2,eye:[0.18,0.2,-2.8],dim:.38}
+];
+const bdCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.001,100);
+const bdQuadScene=new THREE.Scene(), bdQuadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const bdQuadMat=new THREE.MeshBasicMaterial({transparent:true,depthTest:false,depthWrite:false});
+bdQuadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),bdQuadMat));
+const tintMat=new THREE.MeshBasicMaterial({color:0x1e0410,transparent:true,depthTest:false,depthWrite:false});
+const tintScene=new THREE.Scene(); tintScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),tintMat));
+function bdRT(){const pr=renderer.getPixelRatio()*(isMobile?.75:1);return new THREE.WebGLRenderTarget(Math.round(innerWidth*pr),Math.round(innerHeight*pr))}
+BACKDROPS.forEach(b=>{b.scene=null;b.rt=null;b.loading=false});
+let eiffel=null;
+function loadGLB(url,cb){
+  if(!THREE.GLTFLoader||!window.MeshoptDecoder){setTimeout(()=>loadGLB(url,cb),300);return}
+  const l=new THREE.GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder); l.load(url,g=>cb(g.scene),undefined,e=>console.warn('GLB failed',url,e));
+}
+function ensureBackdrop(b){
+  if(b.scene||b.loading) return; b.loading=true;
+  loadGLB(b.file,root=>{
+    root.traverse(o=>{if(o.isMesh){const m=o.material; m.side=THREE.DoubleSide; m.fog=false;
+      if(m.map) m.map.encoding=THREE.LinearEncoding; if(m.emissiveMap) m.emissiveMap.encoding=THREE.LinearEncoding;}});
+    const sc=new THREE.Scene(); sc.add(root); sc.add(new THREE.AmbientLight(0xffffff,1)); b.scene=sc; b.rt=bdRT();
+  });
+}
+function ensureEiffel(){
+  if(eiffel) return; eiffel='loading';
+  loadGLB('models/eiffel.glb',root=>{
+    const gold=new THREE.MeshStandardMaterial({color:0xd9b46a,metalness:.55,roughness:.38,emissive:0x3a1a08,side:THREE.DoubleSide});
+    root.traverse(o=>{if(o.isMesh) o.material=gold});
+    const g=new THREE.Group(); g.add(root);
+    const sc=0.72; g.scale.setScalar(sc);
+    g.position.set(isMobile?34:62,-50,camZ(sIdx3('Go global'))-95); g.rotation.y=-0.5;
+    scene.add(g); eiffel=g;
+  });
+}
+const band=(c,a,b,f)=>clamp((c-(a-f))/f,0,1)*clamp(((b+f)-c)/f,0,1);
+function renderBackdrops(cur){
+  let any=false;
+  for(const b of BACKDROPS){
+    const w=band(cur,b.from,b.to,.6);
+    if(Math.abs(cur-b.from)<2.2||Math.abs(cur-b.to)<2.2||w>0) ensureBackdrop(b);
+    if(w<=0.002||!b.scene) continue;
+    const t=clamp((cur-(b.from-.6))/((b.to+.6)-(b.from-.6)),0,1);
+    bdCam.position.set(...b.eye);
+    bdCam.rotation.order='YXZ';
+    bdCam.rotation.set(b.pitch+my*-.04, b.yaw0+b.yawSpan*t+mx*-.06+Math.sin(time*.07)*.03, 0);
+    bdCam.aspect=camera.aspect; bdCam.fov=camera.aspect<1?78:62; bdCam.updateProjectionMatrix();
+    renderer.setRenderTarget(b.rt); renderer.setClearColor(0x000000,1); renderer.clear(); renderer.render(b.scene,bdCam); renderer.setRenderTarget(null);
+    bdQuadMat.map=b.rt.texture; bdQuadMat.opacity=w; bdQuadMat.needsUpdate=true;
+    renderer.render(bdQuadScene,bdQuadCam);
+    tintMat.opacity=w*b.dim; renderer.render(tintScene,bdQuadCam);
+    any=true;
+  }
+  renderer.setClearColor(0x000000,0);
+  return any;
+}
+addEventListener('resize',()=>BACKDROPS.forEach(b=>{if(b.rt){const pr=renderer.getPixelRatio()*(isMobile?.75:1);b.rt.setSize(Math.round(innerWidth*pr),Math.round(innerHeight*pr))}}));
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now; time+=dt;
   const prev=current;
@@ -1178,6 +1241,9 @@ function frame(now){
   lineGeo.attributes.position.needsUpdate=true;
   lineMat.opacity=clamp((speed-.2)*.35,0,.55);
 
+  if(current>sIdx3('Leadership')-.5) ensureEiffel();
+  renderer.autoClear=false; renderer.clear();
+  renderBackdrops(current);
   renderer.render(scene,camera);
 
   // HTML panels: zoom in/out with distance
