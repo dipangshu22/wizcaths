@@ -28,8 +28,8 @@ img{display:block;max-width:100%}
 #herobg{background:radial-gradient(circle at 30% 40%,#4a0a24,#1e0410 70%)}
 #herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(30,4,16,.82) 0%,rgba(30,4,16,.55) 38%,rgba(30,4,16,0) 62%),linear-gradient(0deg,rgba(30,4,16,.55),transparent 35%)}
 #secbg{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
-#secbg .b{position:absolute;inset:-4%;background:center/cover no-repeat;opacity:0;display:none;will-change:opacity,transform;filter:saturate(.9) brightness(.8)}
-#secbg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(30,4,16,.55) 0%,rgba(30,4,16,.82) 70%,rgba(18,8,26,.94) 100%),linear-gradient(180deg,rgba(74,10,36,.35),rgba(18,8,26,.5))}
+#secbg .b{position:absolute;inset:-4%;background:center/cover no-repeat;opacity:0;display:none;will-change:opacity,transform;filter:saturate(.95) brightness(.92)}
+#secbg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(30,4,16,.38) 0%,rgba(30,4,16,.6) 70%,rgba(18,8,26,.8) 100%),linear-gradient(180deg,rgba(74,10,36,.2),rgba(18,8,26,.35))}
 #gl{position:fixed;inset:0;z-index:2;display:block}
 .stage{position:fixed;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none}
 .panel{position:absolute;width:min(1120px,92vw);margin-bottom:8vh;transform-origin:50% 50%;will-change:transform,opacity,filter;opacity:0;display:none}
@@ -1112,16 +1112,15 @@ function mixN(key,p){p=skp(p);const i=clamp(Math.floor(p),0,SK), j=clamp(i+1,0,S
 
 let px=0,py=-3.3,bank=0,last=performance.now(),time=0,lastSec=-1;
 // per-sector photo backgrounds (sector 2 onward)
-const SECBG={'Trainers':'2025-09-Students-1.webp','Campus life':'2025-10-IMG_0373-scaled.webp','Stories':'2025-10-WhatsApp-Image-2025-10-06-at-13.22.17.webp','Partners':'2025-11-WhatsApp-Image-2024-11-26-at-1.32.54-PM-1-scaled.webp','Centres':'2025-11-WhatsApp-Image-2025-11-12-at-15.11.32-1.webp','Apply':'2025-10-WhatsApp-Image-2025-10-14-at-10.57.47.webp'};
+const SECBG={'Go global':'crew-walkway.webp|50% 30%','Why us':'crew-cabin-aisle.webp|50% 28%','Trainers':'2025-09-Students-1.webp','Campus life':'2025-10-IMG_0373-scaled.webp','Stories':'2025-10-WhatsApp-Image-2025-10-06-at-13.22.17.webp','Partners':'2025-11-WhatsApp-Image-2024-11-26-at-1.32.54-PM-1-scaled.webp','Centres':'2025-11-WhatsApp-Image-2025-11-12-at-15.11.32-1.webp','Apply':'2025-10-WhatsApp-Image-2025-10-14-at-10.57.47.webp'};
 const secbgEl=document.getElementById('secbg');
-const secLayers=[...document.querySelectorAll('.panel')].map((p,i)=>{const f=SECBG[p.dataset.title]; if(!f||i===0) return null; const d=document.createElement('div'); d.className='b'; d.dataset.src='images/'+f; secbgEl.appendChild(d); return {d,i,loaded:false};}).filter(Boolean);
+const secLayers=[...document.querySelectorAll('.panel')].map((p,i)=>{const f=SECBG[p.dataset.title]; if(!f||i===0) return null; const d=document.createElement('div'); d.className='b'; const [fn,pos]=f.split('|'); d.dataset.src='images/'+fn; if(pos) d.style.backgroundPosition=pos; secbgEl.appendChild(d); return {d,i,loaded:false};}).filter(Boolean);
 function updateSecBg(cur){for(const L of secLayers){const a=Math.abs(cur-L.i); const o=Math.max(0,1-a*1.25); if(a<1.6&&!L.loaded){L.d.style.backgroundImage=`url("${L.d.dataset.src}")`;L.loaded=true} L.d.style.display=o>0.002?'block':'none'; if(o>0.002){L.d.style.opacity=o; L.d.style.transform=`scale(${1.08+(L.i-cur)*-0.12})`}}}
 // ---------- 3D model backdrops (GLB) ----------
-// mountain skybox: Welcome→Programs · ship-in-clouds skybox: Go global→Why us · Eiffel Tower flown past at Go global
+// mountain skybox: Welcome→Programs · crew photos: Go global, Why us · Eiffel Tower flown past at Go global
 const sIdx3=t=>[...document.querySelectorAll('.panel')].findIndex(p=>p.dataset.title===t);
 const BACKDROPS=[
-  {file:'models/mountain.glb',from:sIdx3('Welcome'),to:sIdx3('Programs'),yaw0:0.15,yawSpan:-1.7,pitch:-0.06,eye:[0.57,0.05,-0.04],dim:.42},
-  {file:'models/ship.glb',from:sIdx3('Go global'),to:sIdx3('Why us'),yaw0:3.5,yawSpan:-0.8,pitch:-0.2,eye:[0.18,0.2,-2.8],dim:.38}
+  {file:'models/mountain.glb',from:sIdx3('Welcome'),to:sIdx3('Programs'),yaw0:0.15,yawSpan:-1.7,pitch:-0.06,eye:[0.57,0.05,-0.04],dim:.42}
 ];
 const bdCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.001,100);
 const bdQuadScene=new THREE.Scene(), bdQuadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
@@ -1223,7 +1222,7 @@ function frame(now){
     let o=c.userData.base;
     if(dz>-22) o*=clamp((-dz-2)/20,0,1);          // fade as it reaches the camera
     o*=1-.96*clamp(1-current*1.7,0,1);
-    o*=1-.7*settle*clamp(current*2-1,0,1);        // thin clouds when parked on a photo sector
+    o*=1-.88*settle*clamp(current*2-1,0,1);        // thin clouds when parked on a photo sector
     c.material.opacity=o; c.material.color.copy(ct);
   }
 
