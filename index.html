@@ -1133,89 +1133,6 @@ function buildPlane(){
   return g;
 }
 const plane=buildPlane(); scene.add(plane);
-// ---------- Take-off intro: LGBI-style runway at dawn ----------
-const RY=-9;
-const runway=new THREE.Group(); scene.add(runway);
-const rwMats=[];
-function rwMat(m){m.transparent=true; rwMats.push(m); return m}
-function canvasTex(w,h,draw,rx=1,ry=1){const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h);
-  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx,ry); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t}
-function noiseFill(x,w,h,base,spread,n){x.fillStyle=base; x.fillRect(0,0,w,h); for(let i=0;i<n;i++){const v=(R()-.5)*spread; x.fillStyle=v>0?`rgba(255,255,255,${v})`:`rgba(0,0,0,${-v})`; const sz=1+R()*2.5; x.fillRect(R()*w,R()*h,sz,sz)}}
-// asphalt with grain, patches and faint longitudinal wear
-const asphaltTex=canvasTex(512,512,(x,w,h)=>{noiseFill(x,w,h,'#2c2d31',.08,60000);
-  for(let i=0;i<9;i++){x.fillStyle=`rgba(${R()<.5?0:255},${R()<.5?0:255},${R()<.5?0:255},.025)`; x.fillRect(R()*w,R()*h,40+R()*160,40+R()*200)}
-  for(let i=0;i<14;i++){x.strokeStyle='rgba(0,0,0,.18)'; x.lineWidth=1; x.beginPath(); let px0=R()*w,py0=R()*h; x.moveTo(px0,py0); for(let k=0;k<6;k++){px0+=(R()-.5)*40; py0+=(R()-.5)*40; x.lineTo(px0,py0)} x.stroke()}
-},1,26);
-const grassTex=canvasTex(256,256,(x,w,h)=>{noiseFill(x,w,h,'#3d4a2f',.22,14000); for(let i=0;i<40;i++){x.fillStyle=`rgba(${60+R()*40|0},${70+R()*40|0},${30+R()*20|0},.25)`; x.beginPath(); x.arc(R()*w,R()*h,8+R()*30,0,7); x.fill()}},120,120);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),rwMat(new THREE.MeshStandardMaterial({map:grassTex,color:0x7e6a60,roughness:1})));
-ground.rotation.x=-Math.PI/2; ground.position.set(0,RY-.06,0); ground.receiveShadow=true; runway.add(ground);
-// shoulders + runway + parallel taxiway
-const shoulder=new THREE.Mesh(new THREE.PlaneGeometry(19,540),rwMat(new THREE.MeshStandardMaterial({map:asphaltTex,color:0x8f8a86,roughness:.95})));
-shoulder.rotation.x=-Math.PI/2; shoulder.position.set(0,RY-.03,40); shoulder.receiveShadow=true; runway.add(shoulder);
-const strip=new THREE.Mesh(new THREE.PlaneGeometry(13,520),rwMat(new THREE.MeshStandardMaterial({map:asphaltTex,color:0xd6d2d0,roughness:.82,metalness:.04})));
-strip.rotation.x=-Math.PI/2; strip.position.set(0,RY,40); strip.receiveShadow=true; runway.add(strip);
-const twy=new THREE.Mesh(new THREE.PlaneGeometry(8,520),rwMat(new THREE.MeshStandardMaterial({map:asphaltTex,color:0xd8d4cf,roughness:.9})));
-twy.rotation.x=-Math.PI/2; twy.position.set(-34,RY-.01,40); twy.receiveShadow=true; runway.add(twy);
-for(const zc of [240,120,-20]){const c=new THREE.Mesh(new THREE.PlaneGeometry(28,8),twy.material); c.rotation.x=-Math.PI/2; c.position.set(-20,RY-.015,zc); runway.add(c)}
-// rubber deposits in the touchdown zone
-const rubberTex=canvasTex(128,512,(x,w,h)=>{x.clearRect(0,0,w,h); for(let i=0;i<220;i++){const cx=w/2+(R()-.5)*w*.55; x.fillStyle=`rgba(5,5,6,${.05+R()*.12})`; x.fillRect(cx,R()*h,1+R()*5,30+R()*160)}});
-const rub=new THREE.Mesh(new THREE.PlaneGeometry(7,90),rwMat(new THREE.MeshBasicMaterial({map:rubberTex,transparent:true,depthWrite:false})));
-rub.renderOrder=1; rub.material.polygonOffset=true; rub.material.polygonOffsetFactor=-1; rub.material.polygonOffsetUnits=-2; rub.rotation.x=-Math.PI/2; rub.position.set(0,RY+.012,215); runway.add(rub);
-// paint markings
-const paintM=rwMat(new THREE.MeshStandardMaterial({color:0xece8de,roughness:.7,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4}));
-function mark(w,l,x,z){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,l),paintM); m.rotation.x=-Math.PI/2; m.position.set(x,RY+.02,z); m.receiveShadow=true; runway.add(m); return m}
-for(let z=255;z>-200;z-=13) mark(.32,5.5,0,z);                    // centreline
-[-6.05,6.05].forEach(x=>mark(.2,520,x,40));                       // edge lines
-for(let i=0;i<12;i++){ if(i===5||i===6)continue; mark(.5,10,-5.3+i*.96,286) }  // threshold piano keys
-const desTex=canvasTex(256,320,(x,w,h)=>{x.clearRect(0,0,w,h); x.fillStyle='#ece8de'; x.font='bold 250px Arial'; x.textAlign='center'; x.textBaseline='middle'; x.save(); x.translate(w/2,h/2); x.scale(.8,1.25); x.fillText('20',0,0); x.restore()});
-const des=new THREE.Mesh(new THREE.PlaneGeometry(6,8.5),rwMat(new THREE.MeshBasicMaterial({map:desTex,transparent:true,depthWrite:false}))); des.renderOrder=1; des.material.polygonOffset=true; des.material.polygonOffsetFactor=-1; des.material.polygonOffsetUnits=-4; des.rotation.x=-Math.PI/2; des.position.set(0,RY+.02,269); runway.add(des);
-[[248,3],[232,3],[216,2],[184,2],[168,1],[152,1]].forEach(([z,n])=>{for(let k=0;k<n;k++){mark(.3,5,-3.2-k*.55,z); mark(.3,5,3.2+k*.55,z)}}); // touchdown zone
-mark(1.3,15,-3.5,200); mark(1.3,15,3.5,200);                      // aiming point
-// lights
-const lightMat=c=>rwMat(new THREE.SpriteMaterial({map:glowTex,color:c,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));
-const spr=(m,x,y,z,sz)=>{const l=new THREE.Sprite(m); l.scale.set(sz,sz,1); l.position.set(x,y,z); runway.add(l); return l};
-const edgeL=lightMat(0xffe6b0), clL=lightMat(0xf4f6ff), endL=lightMat(0xff3344), startL=lightMat(0x55ff99), blueL=lightMat(0x3f7bff), papW=lightMat(0xffffff), papR=lightMat(0xff2a2a), appL=lightMat(0xfff1cc);
-for(let z=296;z>-205;z-=8){spr(edgeL,-6.7,RY+.22,z,.7); spr(edgeL,6.7,RY+.22,z,.7)}
-for(let z=290;z>-205;z-=4) spr(z<-150&&((z/4)|0)%2?endL:clL,0,RY+.05,z,.32);
-for(let x=-6;x<=6;x+=1.2){spr(startL,x,RY+.2,297,.75); spr(endL,x,RY+.2,-210,.75)}
-for(let z=296;z>-205;z-=10){spr(blueL,-38.3,RY+.15,z,.55); spr(blueL,-29.7,RY+.15,z,.55)}
-[-10,-11.2,-12.4,-13.6].forEach((x,i)=>spr(i<2?papR:papW,x,RY+.5,203,.9));
-for(let d=8;d<70;d+=6){ for(let x=-2;x<=2;x+=1) spr(appL,x,RY+.6,297+d,.6) }      // approach lights behind the threshold
-// control tower + terminal (LGBI-ish silhouettes)
-const bldM=rwMat(new THREE.MeshStandardMaterial({color:0x6b5a5c,roughness:.9}));
-const winTex=canvasTex(256,64,(x,w,h)=>{x.fillStyle='#1d1a22'; x.fillRect(0,0,w,h); x.fillStyle='#2a2630'; for(let r=0;r<2;r++) x.fillRect(0,r*32+6,w,20); for(let c=0;c<64;c++){ x.fillStyle=R()<.75?`rgba(255,${200+R()*30|0},140,${.35+R()*.4})`:'rgba(180,220,255,.5)'; x.fillRect(c*4,6+(R()<.5?0:32),3,20)} x.fillStyle='#4a3e44'; x.fillRect(0,0,w,4)},6,1);
-const winM=rwMat(new THREE.MeshBasicMaterial({map:winTex}));
-const term=new THREE.Mesh(new THREE.BoxGeometry(18,7,120),[winM,winM,bldM,bldM,winM,winM]); term.position.set(-92,RY+3.5,60); term.castShadow=term.receiveShadow=true; runway.add(term);
-
-const shaft=new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.2,24,16),bldM); shaft.position.set(-52,RY+12,150); runway.add(shaft);
-const cab=new THREE.Mesh(new THREE.CylinderGeometry(4.2,3.2,3.4,12),rwMat(new THREE.MeshBasicMaterial({color:0x9fd7e8}))); cab.position.set(-52,RY+25.5,150); runway.add(cab);
-const cabTop=new THREE.Mesh(new THREE.CylinderGeometry(4.6,4.6,.8,12),bldM); cabTop.position.set(-52,RY+27.6,150); runway.add(cabTop);
-spr(lightMat(0xff2233),-52,RY+28.6,150,1.4);
-// distant hills around Guwahati, layered for depth
-const hillCols=['#b47d6f','#8c5a5a','#6a4049'];
-hillCols.forEach((col,li)=>{const sh=new THREE.Shape(); const W=1400, zz=-330-li*-40; sh.moveTo(-W/2,0); for(let i=0;i<=60;i++){const xx=-W/2+i*W/60; const hh=(10+li*6)*(.5+.5*Math.sin(i*.37+li*2)*Math.sin(i*.11+li))+R()*4+4+li*3; sh.lineTo(xx,hh)} sh.lineTo(W/2,0); sh.closePath();
-  const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),rwMat(new THREE.MeshBasicMaterial({color:col,fog:false}))); m.position.set(0,RY-1,-385+li*50); runway.add(m)});
-// city lights on the horizon
-const cityL=lightMat(0xffc27a);
-for(let i=0;i<110;i++){spr(cityL,(R()<.5?-1:1)*(45+R()*200),RY+.3+R()*2,-80-R()*220,.5+R()*1.1)}
-// engine wash / runway grit
-const washMat=new THREE.SpriteMaterial({map:cloudTex[0],color:0xcdb7a8,transparent:true,depthWrite:false,opacity:0});
-const wash=[]; for(let i=0;i<70;i++){const w=new THREE.Sprite(washMat.clone()); w.visible=false; runway.add(w); wash.push({s:w,life:0})}
-let washI=0; function emitWash(x,y,z,v){const p=wash[washI++%wash.length]; p.life=1; p.s.visible=true; p.s.position.set(x+(R()-.5)*.6,y,z); p.vz=v*.25; p.vx=(R()-.5)*2; p.vy=.4+R()*.6}
-// shadow-casting dawn sun that follows the aircraft during take-off
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-const shSun=new THREE.DirectionalLight(0xffd2a8,0); shSun.castShadow=true;
-shSun.shadow.mapSize.set(isMobile?1024:2048,isMobile?1024:2048);
-Object.assign(shSun.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:1,far:160}); shSun.shadow.bias=-.0006; shSun.shadow.normalBias=.02;
-scene.add(shSun); scene.add(shSun.target);
-// nose landing-light pool on the runway
-const llSpot=new THREE.SpotLight(0xfff3dc,0,90,.42,.65,1.2); scene.add(llSpot); scene.add(llSpot.target);
-const INTRO={t:0,on:!matchMedia('(prefers-reduced-motion: reduce)').matches,started:false,speed:1,END:6.8,fan:.35};
-const ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
-const herm=(p0,v0,p1,v1,d,u)=>{const u2=u*u,u3=u2*u;return (2*u3-3*u2+1)*p0+(u3-2*u2+u)*d*v0+(-2*u3+3*u2)*p1+(u3-u2)*d*v1};
-const _ip=new THREE.Vector3(), _ic=new THREE.Vector3(), _il=new THREE.Vector3(), _nl=new THREE.Vector3();
-window.wizIntro=INTRO;
-if(!INTRO.on){runway.visible=false} else stageEl.style.opacity=0;
 
 
 // contrails
@@ -1301,8 +1218,7 @@ addEventListener('resize',()=>BACKDROPS.forEach(b=>{if(b.rt){const pr=renderer.g
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now; time+=dt;
   const prev=current;
-  if(INTRO.on && INTRO.started){ if(target!==0) INTRO.speed=3.2; INTRO.t+=dt*INTRO.speed; if(INTRO.t>=INTRO.END){INTRO.on=false; runway.visible=false; stageEl.style.opacity=''; } }
-  if(INTRO.on){ current=-0.7; } else current+= (target-current)*Math.min(1,dt*2.6);
+  current+= (target-current)*Math.min(1,dt*2.6);
   vel=(current-prev)/Math.max(dt,1e-4);
   const speed=Math.abs(vel);
   const sp=clamp(current,0,N-1);
@@ -1333,57 +1249,9 @@ function frame(now){
   plane.position.set(px,py,cz-14);
   plane.rotation.set(clamp(vel*.05,-.25,.25)+my*.08+.06, .32-mx*.14, bank-.05+Math.sin(time*.9)*.04);
   const U=plane.userData;
-  if(INTRO.on){
-    const t=INTRO.t, bsc=plane.scale.x, yg=RY+1.58*bsc;
-    // spool-up → accelerating roll → rotate → lift-off → climb-out
-    let z,y,vz;
-    const t0=1.1, tRoll=2.7, zLift=100, Z0=178, vLift=-2*(Z0-zLift)/tRoll;
-    const rollU=clamp((t-t0)/tRoll,0,1);
-    if(t<t0+tRoll){ z=Z0-(Z0-zLift)*rollU*rollU; vz=vLift*rollU; y=yg; }
-    else { const u=clamp((t-t0-tRoll)/2.6,0,1); z=herm(zLift,vLift,38,-22,2.6,u); vz=vLift+(-22-vLift)*u; y=herm(yg,0,-3.3,0,2.6,u); }
-    const tR=t0+tRoll-.55;                                   // rotation starts just before lift-off
-    const rot=.2*ss(tR,tR+.6,t)*(1-ss(5.4,6.6,t));
-    const air=ss(t0+tRoll-.05,t0+tRoll+.6,t);
-    // main gear oleo compresses on the roll, extends as weight comes off
-    _ip.set(0,y+(t<t0+tRoll? Math.sin(time*27)*.006*rollU : 0),z);
-    // camera: low runway-level chase, a touch of vibration that builds with speed
-    const k=ss(t0+tRoll-.3,6.6,t), sideX=camera.aspect<1?1.4:5.2, shake=.05*rollU*(1-air);
-    _ic.set(_ip.x+sideX*(1-k)+(R()-.5)*shake, _ip.y+.9+2.8*k+(R()-.5)*shake, _ip.z+11+3*k);
-    _il.set(_ip.x-(camera.aspect<1?.1:.9)*(1-k), _ip.y+.7-.8*k+rot*6, _ip.z-24);
-    const w=ss(5.2,6.6,t);
-    _nl.set(px*.5,py*.15,cz-40);
-    plane.position.lerp(_ip,1-w);
-    camera.position.lerp(_ic,1-w);
-    camera.lookAt(_nl.lerp(_il,1-w));
-    plane.rotation.x=plane.rotation.x*w+(rot+.015)*(1-w);
-    plane.rotation.y=plane.rotation.y*w+(-.03)*(1-w);
-    plane.rotation.z=plane.rotation.z*w+(Math.sin(time*1.7)*.01*air)*(1-w);
-    // gear: retract ~1s after lift-off (mains fold inwards, nose folds forward)
-    const gr=ss(t0+tRoll+.9,t0+tRoll+1.8,t);
-    U.legs.forEach(L=>{ if(L.isNose) L.pivot.rotation.x=gr*1.55; else L.pivot.rotation.z=(L.x<0?1:-1)*gr*1.5; L.pivot.position.y=-.48+(1-air)*.03; });
-    U.gear.visible=gr<.999;
-    U.wheels.forEach(wh=>wh.rotation.x-=(-vz)*dt/(.19*bsc)*(1-air*.6));
-    // take-off flaps, then clean up; wings flex upward once they carry the weight
-    const fl=1-ss(5.0,6.2,t);
-    U.flaps.forEach(f=>{f.fm.position.z=-.28+.42*fl; f.fm.rotation.x=.32*fl});
-    U.wings.forEach(({w:wg,s:sg})=>wg.rotation.z=sg*(.075+.045*air));
-    U.llights.forEach(l=>{l.material.opacity=1-ss(5.2,6.2,t); l.visible=true});
-    // shadow sun + landing-light pool follow the aircraft
-    shSun.visible=true; shSun.intensity=.9*(1-w); shSun.position.set(_ip.x-14,_ip.y+40,_ip.z-26); shSun.target.position.copy(_ip);
-    llSpot.intensity=2.2*(1-ss(4.8,5.8,t)); llSpot.position.set(_ip.x,_ip.y-.3,_ip.z-2.4); llSpot.target.position.set(_ip.x,RY,_ip.z-34);
-    // engine wash kicked up behind the engines
-    if(rollU>.15 && air<.6 && R()<.9){ for(const sx of [-1,1]) emitWash(sx*2.05*bsc,RY+.35,_ip.z+1.8,vz) }
-    const fade=1-ss(4.4,5.6,t); rwMats.forEach(m=>m.opacity=m.userData&&m.userData.base!=null?m.userData.base*fade:fade);
-    stageEl.style.opacity=ss(4.8,6.3,t);
-    INTRO.throttle=ss(.4,1.3,t); INTRO.alt=Math.round(clamp((y-yg)/(-3.3-yg),0,1)*1200);
-    INTRO.fan=.2+INTRO.throttle*.8;
-  } else {
-    if(!INTRO.cleaned){INTRO.cleaned=true; U.gear.visible=false; U.llights.forEach(l=>l.visible=false); U.flaps.forEach(f=>{f.fm.position.z=-.28; f.fm.rotation.x=0}); shSun.visible=false; llSpot.intensity=0}
-    INTRO.throttle=0; INTRO.fan=.35;
-  }
-  U.fans.forEach(f=>f.rotation.z+=dt*(8+INTRO.fan*40));
-  wash.forEach(p=>{ if(p.life>0){p.life-=dt*.9; p.s.position.x+=p.vx*dt; p.s.position.y+=p.vy*dt; p.s.position.z+=p.vz*dt; const k=1-p.life; p.s.scale.set(1+k*7,(1+k*7)*.45,1); p.s.material.opacity=Math.max(0,p.life)*.22*(INTRO.on?1-ss(4.4,5.4,INTRO.t):0); if(p.life<=0)p.s.visible=false} });
-  plane.userData.glows.forEach(g=>{const s=1+speed*.5+Math.sin(time*30)*.08;g.scale.set(s,s,1);g.material.opacity=.6+clamp(speed*.4+INTRO.throttle*.4,0,.4); if(INTRO.throttle) g.scale.multiplyScalar(1+INTRO.throttle*.6)});
+  if(!U.cleaned){U.cleaned=true; U.gear.visible=false; U.llights.forEach(l=>l.visible=false); U.flaps.forEach(f=>{f.fm.position.z=-.28; f.fm.rotation.x=0}); U.wings.forEach(({w:wg,s:sg})=>wg.rotation.z=sg*.12)}
+  U.fans.forEach(f=>f.rotation.z+=dt*22);
+  plane.userData.glows.forEach(g=>{const s=1+speed*.5+Math.sin(time*30)*.08;g.scale.set(s,s,1);g.material.opacity=.6+clamp(speed*.4+0,0,.4)});
   const blink=(Math.sin(time*6)>.7)?1:.25; plane.userData.blink.forEach(b=>b.material.opacity=blink);
   plane.userData.strobe.material.opacity=((time*1.1)%1)<.06?1:0;
   if(speed>.08){ for(const s of [-1,1]) emitTrail(px+s*1.25*Math.cos(bank),py-.5-s*1.25*Math.sin(bank),cz-13.1) }
@@ -1439,7 +1307,6 @@ function frame(now){
 
   // hero background: zooms toward you and fades as you leave the first section
   let hv=clamp(1-current*1.7,0,1);
-  if(INTRO.on) hv*=ss(4.2,5.8,INTRO.t);
   herobg.style.opacity=hv; herobg.style.display=hv>0.002?'block':'none';
   updateSecBg(current);
   herobgImg.style.transform=`scale(${1+Math.max(0,current)*0.9}) translate3d(${mx*-10}px,${my*-6}px,0)`;
@@ -1455,7 +1322,7 @@ function frame(now){
   const sec=clamp(Math.round(current),0,N-1);
   if(sec!==lastSec){lastSec=sec; navBtns.forEach((b,i)=>b.classList.toggle('on',i===sec));
     altsec.textContent=`Sector ${String(sec+1).padStart(2,'0')} / ${String(N).padStart(2,'0')} · ${panels[sec].dataset.title}`}
-  altv.textContent=(INTRO.on?INTRO.alt||0:Math.max(0,Math.round(1200+sp*32000/(N-1)))).toLocaleString('en-IN')+' ft';
+  altv.textContent=Math.max(0,Math.round(1200+sp*32000/(N-1))).toLocaleString('en-IN')+' ft';
   fill.style.width=(sp/(N-1)*100)+'%';
 
   requestAnimationFrame(frame);
@@ -1464,7 +1331,7 @@ function fit(){ring.dataset.r='';camera.aspect=innerWidth/innerHeight;camera.upd
 addEventListener('resize',fit); fit();
 window.wizFly={go,jump:p=>{current=target=p}};
 requestAnimationFrame(frame);
-setTimeout(()=>{const l=document.getElementById('loader');l.style.opacity=0;INTRO.started=true;setTimeout(()=>l.remove(),800)},700);
+setTimeout(()=>{const l=document.getElementById('loader');l.style.opacity=0;setTimeout(()=>l.remove(),800)},700);
 })();
 </script>
 </body>
