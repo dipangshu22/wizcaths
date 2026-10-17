@@ -27,6 +27,9 @@ img{display:block;max-width:100%}
 #herobg .img{position:absolute;top:-3%;bottom:-3%;left:50%;right:-14%;background:url(images/hero-crew-bg.webp) 82% 30%/cover no-repeat;transform-origin:80% 35%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 30%);mask-image:linear-gradient(90deg,transparent,#000 30%)}
 #herobg{background:radial-gradient(circle at 30% 40%,#4a0a24,#1e0410 70%)}
 #herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(30,4,16,.82) 0%,rgba(30,4,16,.55) 38%,rgba(30,4,16,0) 62%),linear-gradient(0deg,rgba(30,4,16,.55),transparent 35%)}
+#secbg{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+#secbg .b{position:absolute;inset:-4%;background:center/cover no-repeat;opacity:0;display:none;will-change:opacity,transform;filter:saturate(.9) brightness(.8)}
+#secbg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(30,4,16,.55) 0%,rgba(30,4,16,.82) 70%,rgba(18,8,26,.94) 100%),linear-gradient(180deg,rgba(74,10,36,.35),rgba(18,8,26,.5))}
 #gl{position:fixed;inset:0;z-index:2;display:block}
 .stage{position:fixed;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none}
 .panel{position:absolute;width:min(1120px,92vw);margin-bottom:8vh;transform-origin:50% 50%;will-change:transform,opacity,filter;opacity:0;display:none}
@@ -341,6 +344,7 @@ form button{margin-top:12px;width:100%;justify-content:center}
 <body>
 <div id="loader"><div class="l"><img src="images/2025-09-logowiz.webp" alt="" onerror="this.remove()">Preparing for take-off</div></div>
 <div id="sky"></div>
+<div id="secbg" aria-hidden="true"></div>
 <div id="herobg" aria-hidden="true"><div class="img"></div></div>
 <canvas id="gl"></canvas>
 
@@ -1105,6 +1109,11 @@ function mix(key,p){p=skp(p);const i=clamp(Math.floor(p),0,SK), j=clamp(i+1,0,SK
 function mixN(key,p){p=skp(p);const i=clamp(Math.floor(p),0,SK), j=clamp(i+1,0,SK), f=clamp(p-i,0,1);return SKY[i][key]+(SKY[j][key]-SKY[i][key])*f}
 
 let px=0,py=-3.3,bank=0,last=performance.now(),time=0,lastSec=-1;
+// per-sector photo backgrounds (sector 2 onward)
+const SECBG={'Welcome':'2025-10-fd.webp','Leadership':'2025-11-WhatsApp-Image-2025-11-12-at-15.13.37-1.webp','Programs':'2025-10-37.webp','Go global':'2025-10-Fly-1024x1024.webp','Why us':'2025-11-ANI-20250329145154.webp','Trainers':'2025-09-Students-1.webp','Campus life':'2025-10-IMG_0373-scaled.webp','Stories':'2025-10-WhatsApp-Image-2025-10-06-at-13.22.17.webp','Partners':'2025-11-WhatsApp-Image-2024-11-26-at-1.32.54-PM-1-scaled.webp','Centres':'2025-11-WhatsApp-Image-2025-11-12-at-15.11.32-1.webp','Apply':'2025-10-WhatsApp-Image-2025-10-14-at-10.57.47.webp'};
+const secbgEl=document.getElementById('secbg');
+const secLayers=[...document.querySelectorAll('.panel')].map((p,i)=>{const f=SECBG[p.dataset.title]; if(!f||i===0) return null; const d=document.createElement('div'); d.className='b'; d.dataset.src='images/'+f; secbgEl.appendChild(d); return {d,i,loaded:false};}).filter(Boolean);
+function updateSecBg(cur){for(const L of secLayers){const a=Math.abs(cur-L.i); const o=Math.max(0,1-a*1.25); if(a<1.6&&!L.loaded){L.d.style.backgroundImage=`url("${L.d.dataset.src}")`;L.loaded=true} L.d.style.display=o>0.002?'block':'none'; if(o>0.002){L.d.style.opacity=o; L.d.style.transform=`scale(${1.08+(L.i-cur)*-0.12})`}}}
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now; time+=dt;
   const prev=current;
@@ -1151,6 +1160,7 @@ function frame(now){
     let o=c.userData.base;
     if(dz>-22) o*=clamp((-dz-2)/20,0,1);          // fade as it reaches the camera
     o*=1-.96*clamp(1-current*1.7,0,1);
+    o*=1-.7*settle*clamp(current*2-1,0,1);        // thin clouds when parked on a photo sector
     c.material.opacity=o; c.material.color.copy(ct);
   }
 
@@ -1190,6 +1200,7 @@ function frame(now){
   // hero background: zooms toward you and fades as you leave the first section
   const hv=clamp(1-current*1.7,0,1);
   herobg.style.opacity=hv; herobg.style.display=hv>0.002?'block':'none';
+  updateSecBg(current);
   herobgImg.style.transform=`scale(${1+Math.max(0,current)*0.9}) translate3d(${mx*-10}px,${my*-6}px,0)`;
   // trainers ring + hero parallax
   if(ringTarget!=null){ringA+=(ringTarget-ringA)*Math.min(1,dt*6); if(Math.abs(ringTarget-ringA)<.05) ringTarget=null}
